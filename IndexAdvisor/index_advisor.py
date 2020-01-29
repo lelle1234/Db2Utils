@@ -19,11 +19,10 @@ schema = "db2inst1"
 
 
 def fix_query(q):
-    s = q.rstrip().replace("'", "''")
-    if s[-1] == ';':
-        return s[:-1]
-    return s
-
+   q = q.strip()
+   if q[-1] == ';':
+       return q[:-1]
+   return q
 
 # set of all sub-sets
 def power_set(iterable):
