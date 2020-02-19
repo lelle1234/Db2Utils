@@ -57,7 +57,7 @@ create table costtbl
 CLEAN_COST_TABLE = "delete from costtbl"
 
 GET_INDEX_NAMES = """
-select rtrim(name)
+select distinct rtrim(name)
 from (
     select name, rank() over (order by explain_time desc) as rnk
     from advise_index
@@ -97,7 +97,7 @@ from (
 where rn = 1 
 order by length(indexes)-length(replace(indexes,',','')), total_cost desc"""
 
-DISPLAY_INDEXES = "select creation_text from advise_index where name = ?"
+DISPLAY_INDEXES = "select distinct cast(creation_text as varchar(2000)) from advise_index where name = ?"
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], "d:u:p:i:h:P:s:")
@@ -144,7 +144,10 @@ except:
     pass
 
 ibm_db.exec_immediate(conn, CLEAN_COST_TABLE)
+print("Begin recomending indexes")
 ibm_db.callproc(conn, 'EXEC_IN_EXPLAIN_MODE', (fix_query(query), "R"))
+print("End recomending indexes")
+
 
 indexes = []
 indexes_sql_stmt = ibm_db.exec_immediate(conn, GET_INDEX_NAMES)
@@ -153,15 +156,19 @@ while tpl:
     indexes.append(tpl[0])
     tpl = ibm_db.fetch_tuple(indexes_sql_stmt)
 
-
-ps = list(power_set(indexes))
-n = 0
 indset = set(indexes)
+print("number of suggested indexes %d" % len(indset))
+print(indset)
+ps = list(power_set(indset)))
+n = 0
+print("Evaluating %d index combinations" % (len(ps)))
+
 save_cost = ibm_db.prepare(conn, SAVE_QUERY_COST)
 enable_index = ibm_db.prepare(conn, ENABLE_INDEX)
 disable_index = ibm_db.prepare(conn, DISABLE_INDEX)
 p: []
 for p in ps:
+    print("evaluating combination %d" % n)
     sp = set(p)
     # enable all in p
     for i in p:
