@@ -524,7 +524,8 @@ class DBIndex(DBNode):
         if self._nullkeys_ == 'N':
             s += "EXCLUDE NULL KEYS\n"
         # always allow reverse scans
-        s += "ALLOW REVERSE SCANS @\n\n"
+        s += "ALLOW REVERSE SCANS\n"
+        s += "COLLECT SAMPLED DETAILED STATISTICS @\n\n"
         return s
 
 

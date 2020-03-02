@@ -19,10 +19,11 @@ schema = "db2inst1"
 
 
 def fix_query(q):
-   q = q.strip()
-   if q[-1] == ';':
-       return q[:-1]
-   return q
+    q = q.strip()
+    if q[-1] == ';':
+        return q[:-1]
+    return q
+
 
 # set of all sub-sets
 def power_set(iterable):
@@ -89,7 +90,7 @@ select row_number() over (order by length(indexes)) as nr
        end as improvement 
 from (
     select indexes, total_cost
-         , max(total_cost) over () as max_cost
+         , (select total_cost from costtbl where indexes = '') as max_cost
          , row_number() over (partition by length(indexes)-length(replace(indexes,',','')) 
                               order by total_cost) as rn 
     from costtbl 
@@ -99,8 +100,12 @@ order by length(indexes)-length(replace(indexes,',','')), total_cost desc"""
 
 DISPLAY_INDEXES = "select distinct cast(creation_text as varchar(2000)) from advise_index where name = ?"
 
+ORIGINAL_COST = "select total_cost from costtbl where indexes = ''"
+
+minnr = 0
+maxnr = 100
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "d:u:p:i:h:P:s:")
+    opts, args = getopt.getopt(sys.argv[1:], "d:u:p:i:h:P:s:m:n:")
 except getopt.GetoptError:
     sys.exit(-1)
 for o, a in opts:
@@ -118,6 +123,10 @@ for o, a in opts:
         port = a
     if o == "-s":
         schema = a
+    if o == "-m":
+        minnr = int(a)
+    if o == "-n":
+        maxnr = int(a)
 
 # check
 if None in [db, user, pwd, infile]:
@@ -159,7 +168,7 @@ while tpl:
 indset = set(indexes)
 print("number of suggested indexes %d" % len(indset))
 print(indset)
-ps = list(power_set(indset)))
+ps = list(power_set(indset))
 n = 0
 print("Evaluating %d index combinations" % (len(ps)))
 
@@ -168,8 +177,13 @@ enable_index = ibm_db.prepare(conn, ENABLE_INDEX)
 disable_index = ibm_db.prepare(conn, DISABLE_INDEX)
 p: []
 for p in ps:
-    print("evaluating combination %d" % n)
+    n += 1
     sp = set(p)
+    if len(sp) < minnr or len(sp) > maxnr:
+        continue
+
+    print("evaluating combination %d" % n)
+
     # enable all in p
     for i in p:
         ibm_db.execute(enable_index, (i,))
@@ -184,7 +198,6 @@ for p in ps:
     # save cost
     inds = reduce((lambda x, y: x+","+y), p, "")
     ibm_db.execute(save_cost, (n, inds))
-    n += 1
 
 # number of chars needed to display all indexes
 max_len = sum(map((lambda x: len(x)), indexes)) + len(indexes)
