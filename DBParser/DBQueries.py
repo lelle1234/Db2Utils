@@ -145,8 +145,11 @@ class DBQueries:
                     where t.type in ('S', 'V')
                  """
 
-    read_tab_columns = """select rtrim(tabschema), rtrim(tabname), rtrim(colname), typename, length, scale
+    read_tab_columns = """select rtrim(tabschema), rtrim(tabname), rtrim(colname), typename
+                            , length/case coalesce(typestringunits,'') when 'CODEUNITS32' then 4 else 1 end as length
+                            , scale
                             , nulls, default, generated, identity, text, compress, inline_length, remarks
+                            , codepage
                       from syscat.columns
                       where tabschema not like 'SYS%' 
                       and tabschema not like 'SQL%' 

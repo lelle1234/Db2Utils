@@ -299,7 +299,8 @@ class DBTable(DBNode):
     def __init__(self, schema, oname, compression, tablespace, indexspace, longspace,
                  organization, volatile, append, remarks):
         super(DBTable, self).__init__(schema, oname, 'N/A', remarks)
-        self._compression_ = compression
+        # self._compression_ = compression
+        self._compression_ = "R"
         self._tablespace_ = tablespace
         self._indexspace_ = indexspace
         self._longspace_ = longspace
@@ -347,7 +348,7 @@ class DBTable(DBNode):
             s += f" LONG IN {self._longspace_}"
         s += "\n"
 
-        if self._compression_:
+        if self._compression_ in ("B","R","V"):
             s += f"COMPRESS YES ADAPTIVE \n"
         s += "ORGANIZE BY "
         if self._organization_ == "R":
@@ -393,7 +394,7 @@ class DBView(DBNode):
 
 class DBColumn:
     def __init__(self, schema, name, colname, typename, length, scale, nulls, default, generated,
-                 identity, text, compress, inline_length, remarks):
+                 identity, text, compress, inline_length, remarks, codepage):
         self._oschema_ = schema
         self._oname_ = name
         self._colname_ = colname
@@ -408,6 +409,7 @@ class DBColumn:
         self._compress_ = compress
         self._inline_length_ = inline_length
         self._remarks_ = remarks
+        self._codepage_ = codepage
 
     def is_identity(self):
         return self._identity_ == "Y"
@@ -419,8 +421,14 @@ class DBColumn:
         s = f"{self._colname_} {self._typename_}"
         if self._typename_ in ("CHARACTER", "VARCHAR"):
             s += f"({self._length_})"
-            if self._typename_ == 'DECIMAL':
-                s += f"({self._length_}, {self._scale_})"
+            if self._codepage_ == 0:
+                s += " FOR BIT DATA "
+
+        if self._typename_ == 'DECIMAL':
+            s += f"({self._length_}, {self._scale_})"
+
+        if self._default_ is not None:
+            s += f" DEFAULT {self._default_} "
 
         if self._nulls_ == 'N':
             s += " NOT NULL"
@@ -459,7 +467,8 @@ class DBIndex(DBNode):
         self._itype_ = itype
         self._pctfree_ = pctfree
         self._reverse_scans_ = reverse_scans
-        self._compression_ = compression
+        # self._compression_ = compression
+        self._compression_ = "Y"
         self._nullkeys_ = nullkeys
         self._index_columns_ = []
         self._index_columns_include_ = []
