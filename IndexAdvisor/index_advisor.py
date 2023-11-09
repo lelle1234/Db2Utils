@@ -32,7 +32,7 @@ def power_set(iterable):
 
 
 CREATE_PROC = """
-CREATE OR REPLACE PROCEDURE EXEC_IN_EXPLAIN_MODE(stmt varchar(32672), mode char(1))
+CREATE OR REPLACE PROCEDURE EXEC_IN_EXPLAIN_MODE(stmt varchar(8100), mode char(1))
 BEGIN
         DECLARE m varchar(25);
         SET m = CASE mode WHEN 'R' THEN ' recommend indexes '
